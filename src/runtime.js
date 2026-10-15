@@ -401,6 +401,12 @@ export class GatewayRuntime {
         )
       }
 
+      // Withdrawn here rather than with the empty-lane sweep below, which only
+      // runs once the catalogue is non-empty: an install upgraded from the
+      // plugin's previous name whose account has since expired would otherwise
+      // keep both dead lanes in the picker indefinitely.
+      if (settings) await this.#withdrawLegacyLanes(settings)
+
       const entries = await fetchModels(this.#state.port, this.#state.apiKey)
       if (entries.length === 0) {
         // An empty catalog means "no account yet", not "no models": the gateway
@@ -431,14 +437,11 @@ export class GatewayRuntime {
       // had: a promotion expiring would otherwise leave the picker offering a
       // model list the gateway no longer prices that way.
       const active = new Set(lanes.map((lane) => lane.providerId))
-      for (const id of [...laneIds(config), ...LEGACY_LANE_IDS]) {
+      for (const id of laneIds(config)) {
         if (active.has(id)) continue
-        if (!(await removeProviderRoute({ settings }, id))) continue
-        this.#logger.info(
-          LEGACY_LANE_IDS.includes(id)
-            ? `workbuddy2dsh: withdrew provider route "${id}" — left over from the plugin's previous name`
-            : `workbuddy2dsh: withdrew provider route "${id}" — it has no models`,
-        )
+        if (await removeProviderRoute({ settings }, id)) {
+          this.#logger.info(`workbuddy2dsh: withdrew provider route "${id}" — it has no models`)
+        }
       }
 
       const ok = await registerProviderLanes(
@@ -504,6 +507,25 @@ export class GatewayRuntime {
         break
       default:
         break
+    }
+  }
+
+  /**
+   * Withdraw the lanes this plugin published under its previous name.
+   *
+   * Nothing refreshes a route once its id stops being published, so an
+   * inherited pair would sit in the picker for good, offering a frozen model
+   * list against a live port. A config that deliberately still names one of
+   * them keeps it, and the call is a no-op once they are gone.
+   */
+  async #withdrawLegacyLanes(settings) {
+    const owned = laneIds(this.#current)
+    for (const id of LEGACY_LANE_IDS) {
+      if (owned.includes(id)) continue
+      if (!(await removeProviderRoute({ settings }, id))) continue
+      this.#logger.info(
+        `workbuddy2dsh: withdrew provider route "${id}" — left over from the plugin's previous name`,
+      )
     }
   }
 

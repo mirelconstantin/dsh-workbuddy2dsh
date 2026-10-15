@@ -310,6 +310,31 @@ test('the lanes published under the plugin\u2019s previous name are withdrawn', 
   }
 })
 
+test('the old lanes are withdrawn even when the catalogue is empty', async () => {
+  // The empty-catalogue path returns before the empty-lane sweep, so an
+  // install upgraded from the previous name whose account has since expired
+  // would otherwise keep both dead lanes in the picker for good. The migration
+  // is deliberately placed ahead of that return.
+  const stub = await startStubGateway({ models: [] })
+  const dataDir = await seedDataDir('legacy-ids-empty')
+  const providers = {
+    'workbuddy2api-free': { api: 'openai-completions', models: [{ id: 'stale' }] },
+    'workbuddy2api-acc': { api: 'openai-completions', models: [{ id: 'stale' }] },
+  }
+  const ctx = fakeCtx(providers)
+  const runtime = new GatewayRuntime(ctx, ctx.logger)
+
+  try {
+    await runtime.start(baseConfig(dataDir, stub.port))
+
+    assert.equal(providers['workbuddy2api-free'], undefined, 'the old free lane is withdrawn')
+    assert.equal(providers['workbuddy2api-acc'], undefined, 'the old metered lane is withdrawn')
+  } finally {
+    await runtime.dispose()
+    await stub.close()
+  }
+})
+
 test('an empty catalog still stores the credential', async () => {
   // The key belongs to the gateway, which is already up, so it is published
   // before the catalog is read. A login landing between two refreshes must be
