@@ -85,3 +85,8 @@ npm-debug.log*
 # Local setup output the old script used to leave behind. Only `bin/` is a
 # tracked, published location — see the note above.
 /_runtime/
+
+# Local analysis helpers kept for this machine's investigation work. The
+# bundled Go toolchain and everything the setup script keeps inside it is
+# covered by the cache rules above.
+/_tools/
