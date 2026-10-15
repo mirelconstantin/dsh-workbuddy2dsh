@@ -79,30 +79,45 @@ jobs:
         run: |
           set -euo pipefail
           DIR="$(mktemp -d)"
-          printf '{"listen":"127.0.0.1:0","api_key":"sk-ci","auth_dir":"%s/auths","state_file":"%s/data/state.json"}' \
-            "$DIR" "$DIR" > "$DIR/config.json"
           mkdir -p "$DIR/auths" "$DIR/data"
+
+          # The gateway logs the *configured* listen address, so parsing it for
+          # a port cannot work when that address is :0. The port is reserved
+          # here and handed to the child instead — the same free-port probe the
+          # plugin itself uses (src/health.js), so this checks the real thing.
+          PORT="$(python3 -c 'import socket; s=socket.socket(); s.bind(("127.0.0.1",0)); print(s.getsockname()[1]); s.close()')"
+          printf '{"listen":"127.0.0.1:%s","api_key":"sk-ci","auth_dir":"%s/auths","state_file":"%s/data/state.json"}' \
+            "$PORT" "$DIR" "$DIR" > "$DIR/config.json"
+
           BIN=""
           for candidate in "./${{ matrix.artifact }}" "./${{ matrix.artifact }}.exe"; do
             [ -x "$candidate" ] && BIN="$candidate" && break
           done
           if [ -z "$BIN" ]; then
-            echo "no built binary found next to the repo root"
-            ls -la
-            exit 1
+            echo "no built binary found next to the repo root"; ls -la; exit 1
           fi
-          # Boot it, read the port it announces, then check the endpoint the
-          # plugin's readiness contract is written against.
-          PORT="$("$BIN" -config "$DIR/config.json" 2>"$DIR/log" & sleep 3; \
-                 grep -oE '127\.0\.0\.1:[0-9]+' "$DIR/log" | head -1 | cut -d: -f2)"
-          if [ -z "$PORT" ]; then
-            echo "the gateway never announced its listen port"; cat "$DIR/log"; exit 1
-          fi
+
+          "$BIN" -config "$DIR/config.json" > "$DIR/log" 2>&1 &
+          CHILD=$!
+          trap 'kill $CHILD 2>/dev/null || true' EXIT
+
+          # 503 with an empty account pool is the documented healthy state; a
+          # connection failure is the only real failure.
+          for _ in $(seq 1 60); do
+            if curl -sf -o /dev/null --max-time 2 "http://127.0.0.1:${PORT}/healthz"; then break; fi
+            if ! kill -0 $CHILD 2>/dev/null; then
+              echo "the gateway exited during startup:"; cat "$DIR/log"; exit 1
+            fi
+            sleep 0.5
+          done
+
           echo "gateway is on 127.0.0.1:${PORT}"
-          curl -fsS "http://127.0.0.1:${PORT}/healthz" && echo
-          curl -fsS -H "Authorization: Bearer sk-ci" "http://127.0.0.1:${PORT}/v1/models" >/dev/null \
-            && echo "the catalog endpoint answers with the key"
-          pkill -f "$(basename "$BIN")" || true
+          curl -fsS -o /dev/null "http://127.0.0.1:${PORT}/healthz" && echo "/healthz answers"
+          curl -fsS -o /dev/null -H "Authorization: Bearer sk-ci" \
+            "http://127.0.0.1:${PORT}/v1/models" && echo "/v1/models answers with the key"
+          # The panel is embedded in the binary, so a missing one means a
+          # broken build even when the API surface is intact.
+          curl -fsS -o /dev/null "http://127.0.0.1:${PORT}/panel/" && echo "/panel/ answers"
 
       - name: upload the platform binary
         uses: actions/upload-artifact@v4
