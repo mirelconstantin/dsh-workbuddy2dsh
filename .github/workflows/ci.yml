@@ -34,8 +34,10 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
+          # No `cache: npm` here on purpose: it requires a package-lock.json,
+          # and this plugin ships none — it declares a single optional peer
+          # dependency and installs nothing of its own.
           node-version: 24
-          cache: npm
 
       - name: install the peer dependency the host would otherwise supply
         run: npm install --no-save @deepseek-ai/schemastery
