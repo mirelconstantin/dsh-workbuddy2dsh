@@ -303,8 +303,7 @@ upstream project, unmodified apart from an English translation of its user-visib
 plugin code (`index.js`, `src/`, `package.json`, `cordis.patch.yml`, `locale/`, `icon.svg`,
 `scripts/`) is original MIT work.
 
-See [NOTICE](NOTICE) for the full attribution and compliance notes. The original Chinese
-upstream README is preserved at [docs/upstream/README.zh.md](docs/upstream/README.zh.md).
+See [NOTICE](NOTICE) for the full attribution and compliance notes.
 
 > **Personal use only.** The upstream project is a self-use tool for managing *your own*
 > account(s). Bulk account registration, offering a paid API, running a shared pool, or

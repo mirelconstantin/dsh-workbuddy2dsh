@@ -6,7 +6,6 @@ accounts behind a single `/v1/chat/completions` endpoint, with a web management 
 
 The upstream project is [linguo2625469/workbuddy2api-panel](https://github.com/linguo2625469/workbuddy2api-panel)
 (MIT), itself a fork of [Sliverkiss/workbuddy2api](https://github.com/Sliverkiss/workbuddy2api).
-The original Chinese README is preserved at [upstream/README.zh.md](upstream/README.zh.md).
 
 > **Personal use only.** This is an unofficial gateway for your own authorised account(s),
 > on your own machine or private environment. Bulk account registration, paid API resale,
