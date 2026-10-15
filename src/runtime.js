@@ -9,6 +9,7 @@ import { ensureGatewayConfig } from './gateway-config.js'
 import { GatewayProcess } from './gateway-process.js'
 import { delay, findFreePort, waitForHealth } from './health.js'
 import { defaultBinaryPath, defaultDataDir, panelUrl } from './paths.js'
+import { bridgeRoute } from './web-route.mjs'
 import {
   fetchModels,
   publishCredential,
@@ -185,6 +186,8 @@ export class GatewayRuntime {
   #credentialNote = undefined
   /** A short tail of the child's own output, for diagnosing a failed startup. */
   #gatewayTail = []
+  /** The disposer for the web route the browser half reads, once registered. */
+  #routeDisposer = null
   #current = null
   #disposed = false
 
@@ -199,6 +202,38 @@ export class GatewayRuntime {
 
   get panelUrl() {
     return this.#state.port ? panelUrl(this.#state.port) : null
+  }
+
+  /**
+   * Publish the status route the composer-dock chip reads.
+   *
+   * Resolved through the same guarded read as the other seams, because
+   * `webServer` is as optional as `settings`: a headless composition composes
+   * no web server at all, and the chip simply has nothing to poll there. The
+   * route is registered once and left alone across restarts — it reads the port
+   * and key through accessors, so a gateway that restarts on a new port is
+   * picked up without re-registering anything.
+   */
+  #registerRoute() {
+    if (this.#routeDisposer !== null) return
+    const webServer = readService(this.#ctx, 'webServer')
+    if (!webServer || typeof webServer.register !== 'function') return
+    try {
+      const route = bridgeRoute({
+        port: () => this.#state.port,
+        apiKey: () => this.#state.apiKey,
+      })
+      this.#routeDisposer = webServer.register(route) ?? (() => {})
+    } catch (err) {
+      // A missing web server is a normal composition, not a fault: the chip
+      // just never appears. Say so once rather than on every start.
+      this.#logger.info(
+        `workbuddy2dsh: no web server available, so the composer chip cannot be served: ${
+          err instanceof Error ? err.message : String(err)
+        }`,
+      )
+      this.#routeDisposer = () => {}
+    }
   }
 
   /**
@@ -263,6 +298,7 @@ export class GatewayRuntime {
       this.#state.port = port
       this.#state.apiKey = apiKey
       if (changed) this.#logger.info(`workbuddy2dsh: wrote gateway config ${configPath}`)
+      this.#registerRoute()
 
       if (attachOnly) {
         this.#logger.info(`workbuddy2dsh: attach mode — using the gateway already on 127.0.0.1:${port}`)
@@ -525,6 +561,21 @@ export class GatewayRuntime {
   /** Permanent teardown. */
   async dispose() {
     this.#disposed = true
+    // The route outlives a restart on purpose (it reads the port through an
+    // accessor), so it is withdrawn here rather than in stop().
+    const disposer = this.#routeDisposer
+    this.#routeDisposer = null
+    if (disposer) {
+      try {
+        disposer()
+      } catch (err) {
+        this.#logger.warn(
+          `workbuddy2dsh: could not withdraw the status route: ${
+            err instanceof Error ? err.message : String(err)
+          }`,
+        )
+      }
+    }
     await this.stop({ unpublish: true })
   }
 }

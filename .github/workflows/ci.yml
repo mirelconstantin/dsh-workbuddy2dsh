@@ -42,6 +42,15 @@ jobs:
       - name: install the peer dependency the host would otherwise supply
         run: npm install --no-save @deepseek-ai/schemastery
 
+      - name: install the browser-half build toolchain
+        run: npm install --no-save --no-audit --no-fund tsdown@^0.15.0 lightningcss@1.32.0 typescript@^5.9.0 react@^18.3.1 react-dom@^18.3.1 @types/react@~18.3.31 @types/react-dom@~18.3.7 @types/node@^24.0.0 @deepseek-ai/dsh-client-locale@0.2.0-rc.2 @deepseek-ai/dsh-client-ui-renderer@0.2.0-rc.2 @deepseek-ai/dsh-client-ui-primitives@0.2.0-rc.2 @deepseek-ai/dsh-client-ui-slots@0.2.0-rc.2 @deepseek-ai/cordis@^4.0.4
+
+      - name: typecheck the browser half
+        run: npm run typecheck
+
+      - name: build the browser half
+        run: npm run build:client
+
       - name: static contract check
         run: npm run check
 

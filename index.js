@@ -159,6 +159,8 @@ export { GatewayRuntime, describeAccessDenial, snapshot } from './src/runtime.js
 export { GatewayProcess } from './src/gateway-process.js'
 export { ensureGatewayConfig, generateApiKey } from './src/gateway-config.js'
 export { findFreePort, waitForHealth } from './src/health.js'
+export { BRIDGE_PREFIX, laneOf, parseCredits as parseCreditsText, readStatus } from './src/bridge.mjs'
+export { bridgeRoute, isTrustedRequest } from './src/web-route.mjs'
 export {
   fetchModels,
   isFreeModel,

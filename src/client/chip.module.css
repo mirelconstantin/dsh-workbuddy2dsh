@@ -1,0 +1,242 @@
+/* The composer chip and its panel.
+   Mirrors the ContextMeter's trigger/panel pair (the control this chip sits
+   beside in the dock row) so the two read as one product: no border on the
+   trigger, the same hover surface, the same radius scale, the same menu
+   elevation. Token values follow the DSH palette. */
+
+.chipRoot {
+  display: inline-flex;
+  flex: none;
+}
+
+/* The trigger IS the ContextMeter's `.trigger`. Health rides the icon rather
+   than a border, because the rest of the dock row has no border and one here
+   would read as a stranger. */
+.chipTrigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex: none;
+  padding: 1px 8px;
+  border: none;
+  border-radius: var(--dsw-radius-sm);
+  background: transparent;
+  color: var(--dsw-alias-label-tertiary);
+  font-family: inherit;
+  font-size: var(--dsh-content-font-size-secondary, 13px);
+  font-variant-numeric: tabular-nums;
+  line-height: calc(20px + var(--dsh-content-font-delta-secondary, 0px));
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.chipTrigger:hover,
+.chipTrigger[aria-expanded='true'] {
+  background: var(--dsw-alias-interactive-bg-hover);
+  color: var(--dsw-alias-label-secondary);
+}
+
+.chipIcon {
+  flex: none;
+}
+
+.chipIcon[data-health='ok'] {
+  color: var(--dsw-alias-state-success-primary, #1a7f37);
+}
+
+.chipIcon[data-health='bad'] {
+  color: var(--dsw-alias-state-error-primary, #d1242f);
+}
+
+/* -- panel ------------------------------------------------------------------ */
+
+.chipPanel {
+  position: fixed;
+  z-index: 1100;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  /* Wide enough for a model name plus its price without truncating; the
+     ContextMeter's panel is 264px, but this one carries a two-group list. */
+  width: min(340px, calc(100vw - 24px));
+  max-height: calc(100vh - 48px);
+  overflow-y: auto;
+  padding: 12px;
+  border: 0;
+  border-radius: var(--dsw-radius-lg);
+  background: var(--dsw-specific-menu);
+  backdrop-filter: var(--dsw-menu-backdrop-filter);
+  --dsw-elevation-stroke-color: var(--dsw-alias-border-l1);
+  box-shadow: var(--dsw-elevation-prominent);
+  font-size: 12px;
+  line-height: 20px;
+  color: var(--dsw-alias-label-secondary);
+  cursor: default;
+}
+
+.chipPanelHead {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  color: var(--dsw-alias-label-tertiary);
+}
+
+.chipPanelTitle {
+  font-weight: 600;
+  color: var(--dsw-alias-label-secondary);
+}
+
+/* The pool figure, right-aligned against the header like the meter's
+   `.figures`, so both panels share a header rhythm. */
+.chipFigures {
+  margin-left: auto;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  color: var(--dsw-alias-label-primary);
+}
+
+/* The panel link. A real anchor, so it opens in a tab and can be
+   middle-clicked — a button that calls window.open does neither. */
+.chipPanelLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  align-self: flex-start;
+  margin-top: 8px;
+  padding: 4px 10px;
+  border: 1px solid var(--dsw-alias-border-l2, #d0d7de);
+  border-radius: var(--dsw-radius-sm, 8px);
+  color: var(--dsw-alias-state-business-primary, #4f8cff);
+  font-family: inherit;
+  font-size: 12px;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.chipPanelLink:hover {
+  background: var(--dsw-alias-interactive-bg-hover);
+}
+
+.chipPanelLink:focus-visible {
+  outline: 2px solid var(--dsw-alias-state-business-primary, #4f8cff);
+  outline-offset: 1px;
+}
+
+/* -- facts strip ------------------------------------------------------------ */
+
+.chipFacts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  margin: 8px 0 2px;
+  font-size: 11px;
+  color: var(--dsw-alias-label-tertiary);
+}
+
+.chipFact {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+}
+
+.chipFactValue {
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  color: var(--dsw-alias-label-primary);
+}
+
+/* -- model groups ----------------------------------------------------------- */
+
+.chipGroupLabel {
+  flex: none;
+  margin: 10px 0 2px;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  color: var(--dsw-alias-label-tertiary);
+}
+
+/* A grid, not a flex row: the name takes the rest and the price keeps its own
+   column, so a long model name never pushes the prices out of line. */
+.chipRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  column-gap: 8px;
+  width: 100%;
+  padding: 3px 8px 3px 4px;
+  border: none;
+  border-radius: var(--dsw-radius-sm);
+  background: transparent;
+  color: var(--dsw-alias-label-secondary);
+  font-family: inherit;
+  font-size: 12px;
+  line-height: 18px;
+  text-align: left;
+}
+
+.chipRowLabel {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.chipRowName {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* The promotion label, under the name — the fact that a model is free *now*
+   and why. */
+.chipRowSub {
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 11px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chipPrice {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 5px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.chipPriceNow {
+  font-weight: 500;
+  color: var(--dsw-alias-label-primary);
+}
+
+/* A model the gateway prices as free: the success colour, because that is the
+   one number a reader of this panel came for. */
+.chipPriceFree {
+  color: var(--dsw-alias-state-success-primary, #1a7f37);
+}
+
+/* The pre-promotion list price, struck through. Showing only the factor would
+   hide that the promotion is temporary. */
+.chipPriceWas {
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 10px;
+  text-decoration: line-through;
+}
+
+.chipEmpty {
+  padding: 8px 0;
+  color: var(--dsw-alias-label-tertiary);
+}
+
+/* The offline state's own line, so "not running" reads as a state rather than
+   an empty list. */
+.chipOfflineNote {
+  padding: 8px 0 2px;
+  color: var(--dsw-alias-state-error-primary, #d1242f);
+  font-size: 11px;
+  overflow-wrap: anywhere;
+}

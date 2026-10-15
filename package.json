@@ -7,12 +7,14 @@
   "main": "index.js",
   "exports": {
     ".": "./index.js",
+    "./client": "./lib/client.js",
     "./package.json": "./package.json",
     "./locale/*.json": "./locale/*.json"
   },
   "files": [
     "index.js",
     "src",
+    "lib",
     "cordis.patch.yml",
     "icon.svg",
     "locale",
@@ -34,14 +36,31 @@
     "plugin",
     "workbuddy",
     "codebuddy",
+    "tencent",
     "workbuddy2api",
+    "codebuddy2api",
     "llm-provider",
     "llm-adapter",
+    "llm",
+    "ai-models",
     "free-models",
     "free-llm",
+    "free-ai",
     "deepseek",
     "deepseek-v4-1-flash",
-    "openai-compatible"
+    "deepseek-v4.1-flash",
+    "glm",
+    "kimi",
+    "openai-compatible",
+    "openai-api",
+    "chat-completions",
+    "self-hosted",
+    "gateway",
+    "api-gateway",
+    "reverse-proxy",
+    "account-pool",
+    "credits",
+    "nodejs"
   ],
   "license": "MIT",
   "author": "Mirel Constantinescu (https://github.com/mirelconstantin)",
@@ -61,6 +80,16 @@
     "bundle": {
       "patch": "./cordis.patch.yml"
     },
+    "client": {
+      "inject": [
+        "@deepseek-ai/dsh-client-locale",
+        "@deepseek-ai/dsh-client-ui-renderer"
+      ],
+      "platform": "web",
+      "external": [
+        "@deepseek-ai/dsh-client-ui-primitives"
+      ]
+    },
     "compatibility": {
       "dshReleases": {
         "0.2.0-rc.2": "compatible"
@@ -68,11 +97,14 @@
     }
   },
   "scripts": {
-    "test": "node --test test/provider.test.js test/gateway-config.test.js test/runtime.test.js test/plugin.test.js",
+    "test": "node --test test/provider.test.js test/gateway-config.test.js test/bridge.test.js test/runtime.test.js test/plugin.test.js",
     "check": "node --check index.js && node scripts/check-plugin.mjs",
     "e2e": "node scripts/e2e-gateway.mjs",
     "build:gateway": "node scripts/build-gateway.mjs",
-    "setup": "node scripts/build-gateway.mjs"
+    "setup": "node scripts/build-gateway.mjs",
+    "typecheck": "tsc --noEmit",
+    "build:client": "tsdown -c tsdown.client.config.ts",
+    "build": "npm run typecheck && npm run build:client"
   },
   "peerDependencies": {
     "@deepseek-ai/schemastery": ">=3.18.4 <4"

@@ -150,6 +150,18 @@ for (const file of srcFiles) {
 // ------------------------------------------------------------------ README
 
 const readme = read('README.md')
+
+// Every relative link in the README must resolve. A dead link in the page a
+// user reads first costs more than any other single defect, and nothing else
+// in this check would catch one.
+const linkTargets = [...readme.matchAll(/\]\((?!https?:|mailto:|#)([^)]+)\)/g)].map((m) =>
+  decodeURIComponent(m[1].split('#')[0]).trim(),
+)
+for (const target of linkTargets) {
+  if (target === '') continue
+  if (!existsSync(join(root, target))) fail(`README.md: links to ${target}, which does not exist`)
+}
+
 const modelExperience = readme.indexOf('\n## Model Experience')
 const limitations = readme.indexOf('\n## Known Limitations and Deferred Work')
 
@@ -166,6 +178,46 @@ if (modelExperience === -1) {
   if (readme.slice(limitations).split('\n').filter((line) => line.startsWith('- **')).length === 0) {
     fail('README.md: "## Known Limitations and Deferred Work" needs at least one "- **…**" entry')
   }
+}
+
+// ------------------------------------------------------------------ client
+
+// The browser half is a separate artifact with its own contract. Each rule here
+// encodes a failure that is invisible until the chip silently never renders.
+if (!existsSync(join(root, 'tsdown.client.config.ts'))) {
+  fail('tsdown.client.config.ts is missing — the browser half has no build')
+}
+
+const clientEntry = join(root, 'src', 'client', 'index.ts')
+if (!existsSync(clientEntry)) {
+  fail('src/client/index.ts is missing — the browser half has no entry')
+} else {
+  const client = read('src/client/index.ts')
+  // DSH post-mortem 0001 applies to the browser half too: a default export
+  // next to named exports makes the loader discard the namespace.
+  if (/^\s*export\s+default\b/m.test(client)) {
+    fail('src/client/index.ts: export default is forbidden — DSH discards the namespace (post-mortem 0001)')
+  }
+  if (!/^export const inject = \['slots', 'locale'\]$/m.test(client)) {
+    fail("src/client/index.ts: inject must be exactly ['slots', 'locale']")
+  }
+  if (!client.includes("'conversation.composer.dock'")) {
+    fail("src/client/index.ts: no registration on 'conversation.composer.dock' — the chip would never render")
+  }
+  // The locale contract is Record<BuiltInLocaleId, …>, and the ids are fixed
+  // to exactly zh + en. A dictionary missing either will not load.
+  if (!/\bzh\b/.test(client) || !/\ben\b/.test(client)) {
+    fail('src/client/index.ts: the locale registration must supply both zh and en')
+  }
+}
+
+// One CSS module only. A second .module.css gives the bundle a second style
+// tag, and the loader keys its tags per file.
+const cssModules = existsSync(join(root, 'src', 'client'))
+  ? readdirSync(join(root, 'src', 'client')).filter((file) => file.endsWith('.module.css'))
+  : []
+if (cssModules.length > 1) {
+  fail(`src/client: ${cssModules.length} CSS modules (${cssModules.join(', ')}) — the bundle must carry exactly one`)
 }
 
 // --------------------------------------------------------------- licensing

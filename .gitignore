@@ -24,9 +24,15 @@ config.local.json
 /backups/
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Build output. `bin/` is deliberately TRACKED: it holds the prebuilt gateway
-# binaries and is the first place the plugin looks for one (see
-# `src/paths.js: defaultBinaryPath`). Release archives are built from it.
+# Published build artifacts, deliberately TRACKED.
+#
+# `bin/` holds the gateway binary and `lib/` the browser half. Both are what a
+# consumer needs with no build step of their own: `bin/` is the first place
+# `defaultBinaryPath()` looks (src/paths.js), and `lib/client.js` is what the
+# host's module loader registers the composer chip from. Neither is rebuilt at
+# install time, so neither can be left to CI to produce.
+#
+# Build caches and scratch still stay out — see the `_tools/cache/` rules above.
 # ─────────────────────────────────────────────────────────────────────────────
 *.tmp
 __pycache__/
@@ -34,6 +40,7 @@ __pycache__/
 *.zip
 *.tar.gz
 *.log
+*.tsbuildinfo
 server.exe
 .DS_Store
 
