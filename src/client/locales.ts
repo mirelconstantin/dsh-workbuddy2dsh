@@ -8,7 +8,7 @@
  */
 
 export const en = {
-  title: 'WorkBuddy2API',
+  title: 'dsh-workbuddy2dsh',
   description: 'Your WorkBuddy account as an OpenAI-compatible gateway: free and account-metered models, pool health and credit spend, in the composer.',
 
   // -- chip trigger ----------------------------------------------------------

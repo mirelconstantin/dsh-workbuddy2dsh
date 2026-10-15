@@ -6,7 +6,7 @@ to rediscover.
 
 ## What this package is
 
-A DeepSeek Harness **bundle** that runs the WorkBuddy2API gateway as a sidecar
+A DeepSeek Harness **bundle** that runs the upstream gateway as a sidecar
 and publishes its model catalog into DSH's `llm-pi-ai` provider settings. It is
 a thin lifecycle wrapper: the gateway is a separate Go binary and none of its
 behaviour is reimplemented here.
@@ -57,6 +57,23 @@ list price; `parseCredits` on `credits: 'x0.00'` is the fallback for when the
 panel is down. Write both routes in a single `settings.mutate`, or the picker
 shows a half-published split. A lane left empty is *withdrawn*, not written
 with `models: []`.
+
+**The lane ids were renamed, and the old ones are still withdrawn.** The
+defaults are `dsh-workbuddy2dsh-free` / `dsh-workbuddy2dsh-acc`.
+`LEGACY_LANE_IDS` in `src/runtime.js` still names the previous pair so the first
+refresh after an upgrade takes those routes out of the picker: nothing refreshes
+a route once its id stops being published, so an inherited pair would sit there
+for good offering a frozen model list against a live port. A config that
+deliberately still names one of the old ids keeps it — the active set is
+consulted first.
+
+**The retry policy mirrors `dsh-opencode-router`, and a test pins it.** The
+numbers are that plugin's free-lane policy verbatim (8 retries, 1 s → 20 s,
+jitter 0.2), because the same upstreams sit behind both gateways. It has to be
+written in the *declared* shape — `mode`, `maxRetries`, `retryableCodes`, with
+the backoff nested under `backoff` — because the flat `maxRetries` /
+`maxRetryDelayMs` spelling was removed from `llm-pi-ai` and is now a hard error.
+Changing the numbers means changing both plugins deliberately.
 
 **Never read a seam off the context unguarded.** `inject = []` has a
 consequence that is easy to miss: Cordis's context proxy *throws* on
@@ -144,7 +161,8 @@ These were read from `@deepseek-ai/dsh-llm-pi-ai@0.2.0-rc.2` and
 - A provider profile adds `apiKeyEnv` (`role('credential-ref')`), `displayName`,
   `api`, `baseURL`, `models`, `modelOverrides`, `defaultInput`,
   `defaultContextWindow`, `defaultMaxTokens`, `headers`, `reasoning`, `compat`,
-  `transport`, `timeoutMs`, and the image/retry fields.
+  `transport`, `timeoutMs`, `retryPolicy` (a `RetryPolicySchema` from
+  `@deepseek-ai/dsh-llm`, resolved by `resolveRetryPolicy`), and the image fields.
 - `SettingsForms.mutate` refuses any path outside a volatile node, and an entry
   with no volatile fields at all. `providers` is volatile, so this works; a
   non-volatile sibling would throw `Config field "…" is not volatile`.

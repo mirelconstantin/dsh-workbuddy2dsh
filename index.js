@@ -1,15 +1,15 @@
 /**
- * dsh-workbuddy2dsh — the WorkBuddy2API gateway inside DeepSeek Harness.
+ * dsh-workbuddy2dsh — the upstream gateway inside DeepSeek Harness.
  *
  * What this plugin is
  * -------------------
  * WorkBuddy (the international CodeBuddy app) ships DeepSeek V4.1 Flash on a
- * limited-time zero-credit promotion. WorkBuddy2API is a self-hosted gateway
- * that turns a WorkBuddy account into an ordinary OpenAI-compatible `/v1` API
- * and ships a web panel for adding the account and watching the pool. This
- * plugin does not reimplement any of that: it runs the gateway as a **sidecar**
- * and publishes its catalog into DSH's `llm-pi-ai` provider settings, so the
- * models appear in the normal model picker.
+ * limited-time zero-credit promotion. The upstream gateway is a self-hosted
+ * server that turns a WorkBuddy account into an ordinary OpenAI-compatible
+ * `/v1` API and ships a web panel for adding the account and watching the pool.
+ * This plugin does not reimplement any of that: it runs the gateway as a
+ * **sidecar** and publishes its catalog into DSH's `llm-pi-ai` provider
+ * settings, so the models appear in the normal model picker.
  *
  * Unlike `dsh-opencode-router` there is no proxy/exit pool: the gateway talks
  * to the upstream directly, and the only moving part is the child process.
@@ -51,12 +51,12 @@ export const name = 'workbuddy2dsh'
 export const inject = []
 
 export const defaults = {
-  providerId: 'workbuddy2api-free',
-  accountProviderId: 'workbuddy2api-acc',
+  providerId: 'dsh-workbuddy2dsh-free',
+  accountProviderId: 'dsh-workbuddy2dsh-acc',
   apiKeyEnv: 'WORKBUDDY2DSH_TOKEN',
   apiKey: '',
-  displayName: 'WorkBuddy2API Free',
-  accountDisplayName: 'WorkBuddy2API Account',
+  displayName: 'dsh-workbuddy2dsh Free',
+  accountDisplayName: 'dsh-workbuddy2dsh Account',
   refreshSeconds: 300,
   restartDelayMs: 1000,
   restartMaxDelayMs: 60000,
@@ -170,6 +170,7 @@ export { findFreePort, waitForHealth } from './src/health.js'
 export { BRIDGE_PREFIX, laneOf, parseCredits as parseCreditsText, readStatus } from './src/bridge.mjs'
 export { bridgeRoute, isTrustedRequest } from './src/web-route.mjs'
 export {
+  RETRY_POLICY,
   fetchModels,
   isFreeModel,
   parseCredits,

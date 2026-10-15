@@ -1,12 +1,12 @@
 <p align="center">
-  <img src="./icon.svg" width="96" alt="WorkBuddy2API">
+  <img src="./icon.svg" width="96" alt="dsh-workbuddy2dsh">
 </p>
 
 <h1 align="center">dsh-workbuddy2dsh</h1>
 
 <p align="center">
   <b>Your WorkBuddy account's models — including the free DeepSeek V4.1 Flash — inside DeepSeek Harness.</b><br>
-  Runs the self-hosted <a href="https://github.com/linguo2625469/workbuddy2api-panel">WorkBuddy2API</a>
+  Runs the self-hosted <a href="https://github.com/linguo2625469/workbuddy2api-panel">upstream gateway</a>
   gateway as a sidecar and publishes its catalog into the normal model picker, in two lanes:
   free and account-metered. No proxy, no exit pool, no API key to buy.
 </p>
@@ -35,10 +35,10 @@ panel all come from the upstream gateway; this plugin starts it, keeps it alive,
 what it advertises.
 
 ```
-DeepSeek Harness ──llm-pi-ai route──▶ http://127.0.0.1:7863/v1 ──▶ WorkBuddy2API ──▶ WorkBuddy
-        ▲                                    (sidecar child process)          (your account)
-        ├── model picker: WorkBuddy2API Free    → hy3, deepseek-v4.1-flash, …
-        ├── model picker: WorkBuddy2API Account → glm-5.2, kimi-k3, …
+DeepSeek Harness ──llm-pi-ai route──▶ http://127.0.0.1:7863/v1 ──▶ dsh-workbuddy2dsh ──▶ WorkBuddy
+        ▲                                    (sidecar child process)               (your account)
+        ├── model picker: dsh-workbuddy2dsh Free    → hy3, deepseek-v4.1-flash, …
+        ├── model picker: dsh-workbuddy2dsh Account → glm-5.2, kimi-k3, …
         └── composer chip: pool health · prices · credits spent · panel link
 ```
 
@@ -161,11 +161,11 @@ Everything is optional; the defaults work. Set fields in the plugin's card on th
 | `port` | live | `7863` | Loopback port. `0` picks a free port at startup. |
 | `refreshSeconds` | live | `300` | Model-list refresh interval once the catalog is populated. |
 | `apiKey` | live | *(resolved)* | The gateway's own API key — what its panel asks for, and the bearer token both routes send. Blank keeps the key already in `~/.workbuddy2dsh/config.json`, or the default on a fresh install. Changing it restarts the gateway. |
-| `providerId` | — | `workbuddy2api-free` | Route name for the free lane. |
+| `providerId` | — | `dsh-workbuddy2dsh-free` | Route name for the free lane. |
 | `apiKeyEnv` | — | `WORKBUDDY2DSH_TOKEN` | Credential reference holding the gateway API key. Shared by both lanes. |
-| `displayName` | — | `WorkBuddy2API Free` | Group name in the picker for the free lane. |
-| `accountProviderId` | — | `workbuddy2api-acc` | Route name for the metered lane. |
-| `accountDisplayName` | — | `WorkBuddy2API Account` | Group name in the picker for the metered lane. |
+| `displayName` | — | `dsh-workbuddy2dsh Free` | Group name in the picker for the free lane. |
+| `accountProviderId` | — | `dsh-workbuddy2dsh-acc` | Route name for the metered lane. |
+| `accountDisplayName` | — | `dsh-workbuddy2dsh Account` | Group name in the picker for the metered lane. |
 | `restartDelayMs` / `restartMaxDelayMs` | — | `1000` / `60000` | Restart backoff bounds. |
 | `maxConsecutiveCrashes` | — | `5` | Consecutive crashes before the plugin stops restarting. |
 | `startupTimeoutMs` | — | `30000` | How long to wait for `/healthz` before declaring startup failed. |
@@ -227,6 +227,13 @@ everything else as you set it. See [docs/GATEWAY.md](docs/GATEWAY.md).
    ```
 
    Nothing here patches the profile file behind the ConfigEditor's back.
+
+   Each route also carries a `retryPolicy` — the same numbers as
+   [dsh-opencode-router](https://github.com/mirelconstantin/dsh-opencode-router)'s free lane, since
+   the same upstreams sit behind both gateways: 8 retries, backing off 1 s → 20 s with 0.2
+   jitter, over `EMPTY_RESPONSE`, `RATE_LIMIT`, `SERVER`, `TIMEOUT` and `TRANSPORT`. Worst case is
+   roughly 91 s of silent retries per step before a failure surfaces. It is fixed rather than a
+   setting, because it is a property of the upstreams, not of your machine.
 6. It refreshes on a timer — every `refreshSeconds` once models exist, every 15 s while the
    catalog is empty, so a fresh login shows up within seconds.
 7. It splits the catalogue into two lanes and keeps them separate on every refresh:
@@ -282,7 +289,7 @@ except the child's teardown signal and the binary's name.
 | Symptom | Cause and fix |
 |---|---|
 | **The panel asks for an API key** | It is the gateway's own key, and a fresh install uses `sk-workbuddy2dsh`. Otherwise it is the `apiKey` setting, else `api_key` in `~/.workbuddy2dsh/config.json`, else the default — and the plugin prints the resolved value in DSH's log at startup. |
-| Picker never shows **WorkBuddy2API Free** | No account yet. Open the panel and add one; the plugin retries every 15 s. |
+| Picker never shows **dsh-workbuddy2dsh Free** | No account yet. Open the panel and add one; the plugin retries every 15 s. |
 | Only one of the two lanes appears | Its model set is empty (e.g. the promotion ended), so the route is withdrawn instead of published empty. Check the panel's **Models** view. |
 | The chip never appears | The browser half is not built. Run `npm run build`, then reload DSH. |
 | The chip reads `not running` | The gateway is not answering. Check `binaryPath` and run the gateway by hand to see its output. |

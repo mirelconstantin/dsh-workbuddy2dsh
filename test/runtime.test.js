@@ -142,7 +142,7 @@ const METERED_IDS = ['cn:glm-5.2']
 /** True when neither lane has a route in the fake settings document. */
 function noRoutes(providers) {
   return (
-    providers['workbuddy2api-free'] === undefined && providers['workbuddy2api-acc'] === undefined
+    providers['dsh-workbuddy2dsh-free'] === undefined && providers['dsh-workbuddy2dsh-acc'] === undefined
   )
 }
 
@@ -218,11 +218,11 @@ const baseConfig = (dataDir, port) => ({
   attachOnly: true,
   dataDir,
   port,
-  providerId: 'workbuddy2api-free',
-  accountProviderId: 'workbuddy2api-acc',
+  providerId: 'dsh-workbuddy2dsh-free',
+  accountProviderId: 'dsh-workbuddy2dsh-acc',
   apiKeyEnv: 'WORKBUDDY2DSH_TOKEN',
-  displayName: 'WorkBuddy2API Free',
-  accountDisplayName: 'WorkBuddy2API Account',
+  displayName: 'dsh-workbuddy2dsh Free',
+  accountDisplayName: 'dsh-workbuddy2dsh Account',
   refreshSeconds: 300,
   startupTimeoutMs: 8000,
 })
@@ -232,13 +232,13 @@ test('start publishes both lanes and dispose withdraws them', async () => {
   try {
     await runtime.start(baseConfig(dataDir, stub.port))
 
-    const free = providers['workbuddy2api-free']
-    const account = providers['workbuddy2api-acc']
+    const free = providers['dsh-workbuddy2dsh-free']
+    const account = providers['dsh-workbuddy2dsh-acc']
     assert.ok(free, 'the free lane was published')
     assert.ok(account, 'the metered lane was published')
 
-    assert.equal(free.displayName, 'WorkBuddy2API Free')
-    assert.equal(account.displayName, 'WorkBuddy2API Account')
+    assert.equal(free.displayName, 'dsh-workbuddy2dsh Free')
+    assert.equal(account.displayName, 'dsh-workbuddy2dsh Account')
     for (const route of [free, account]) {
       assert.equal(route.api, 'openai-completions')
       assert.equal(route.baseURL, `http://127.0.0.1:${stub.port}/v1`)
@@ -282,6 +282,34 @@ test('startup states the gateway API key and where to change it', async () => {
   }
 })
 
+test('the lanes published under the plugin\u2019s previous name are withdrawn', async () => {
+  // Nothing refreshes a route once its id stops being published, so an
+  // inherited pair would sit in the picker offering a frozen model list
+  // against a live port. Both go on the first refresh that finds them.
+  const stub = await startStubGateway({ models: CATALOG })
+  const dataDir = await seedDataDir('legacy-ids')
+  const stale = () => ({ api: 'openai-completions', models: [{ id: 'stale' }] })
+  const providers = { 'workbuddy2api-free': stale(), 'workbuddy2api-acc': stale() }
+  const ctx = fakeCtx(providers)
+  const runtime = new GatewayRuntime(ctx, ctx.logger)
+
+  try {
+    await runtime.start(baseConfig(dataDir, stub.port))
+
+    assert.equal(providers['workbuddy2api-free'], undefined, 'the old free lane is withdrawn')
+    assert.equal(providers['workbuddy2api-acc'], undefined, 'the old metered lane is withdrawn')
+    assert.ok(providers['dsh-workbuddy2dsh-free'], 'and the current lanes are published')
+    assert.ok(providers['dsh-workbuddy2dsh-acc'])
+    assert.ok(
+      ctx.logs.some(([, m]) => /left over from the plugin's previous name/.test(m)),
+      'the withdrawal says why',
+    )
+  } finally {
+    await runtime.dispose()
+    await stub.close()
+  }
+})
+
 test('an empty catalog still stores the credential', async () => {
   // The key belongs to the gateway, which is already up, so it is published
   // before the catalog is read. A login landing between two refreshes must be
@@ -311,15 +339,15 @@ test('the seams are reached through ctx.inject when a direct read is refused', a
       [{ ref: 'WORKBUDDY2DSH_TOKEN', value: API_KEY }],
       'the gateway key reached the credential store',
     )
-    assert.ok(providers['workbuddy2api-free'], 'the free lane was published')
-    assert.ok(providers['workbuddy2api-acc'], 'the metered lane was published')
-    assert.equal(providers['workbuddy2api-free'].baseURL, `http://127.0.0.1:${stub.port}/v1`)
+    assert.ok(providers['dsh-workbuddy2dsh-free'], 'the free lane was published')
+    assert.ok(providers['dsh-workbuddy2dsh-acc'], 'the metered lane was published')
+    assert.equal(providers['dsh-workbuddy2dsh-free'].baseURL, `http://127.0.0.1:${stub.port}/v1`)
     assert.deepEqual(
-      providers['workbuddy2api-free'].models.map((m) => m.id),
+      providers['dsh-workbuddy2dsh-free'].models.map((m) => m.id),
       FREE_IDS,
     )
     assert.deepEqual(
-      providers['workbuddy2api-acc'].models.map((m) => m.id),
+      providers['dsh-workbuddy2dsh-acc'].models.map((m) => m.id),
       METERED_IDS,
     )
   } finally {
@@ -385,12 +413,12 @@ test('a refresh-interval change only re-arms the timer', async () => {
   try {
     const config = baseConfig(dataDir, stub.port)
     await runtime.start(config)
-    const published = providers['workbuddy2api-free']
+    const published = providers['dsh-workbuddy2dsh-free']
 
     const outcome = await runtime.reconfigure({ ...config, refreshSeconds: 60 })
     assert.equal(outcome, 'refresh:refreshSeconds')
     // Same route object identity: nothing was torn down and rebuilt.
-    assert.equal(providers['workbuddy2api-free'], published)
+    assert.equal(providers['dsh-workbuddy2dsh-free'], published)
   } finally {
     await stub.close()
     await runtime.dispose()
@@ -402,14 +430,14 @@ test('a provider-id change moves the lane, and leaves the other one alone', asyn
   try {
     const config = baseConfig(dataDir, stub.port)
     await runtime.start(config)
-    assert.ok(providers['workbuddy2api-free'])
-    assert.ok(providers['workbuddy2api-acc'])
+    assert.ok(providers['dsh-workbuddy2dsh-free'])
+    assert.ok(providers['dsh-workbuddy2dsh-acc'])
 
     const outcome = await runtime.reconfigure({ ...config, providerId: 'workbuddy2' })
     assert.equal(outcome, 'refresh:providerId')
-    assert.equal(providers['workbuddy2api-free'], undefined, 'the old lane id is withdrawn')
+    assert.equal(providers['dsh-workbuddy2dsh-free'], undefined, 'the old lane id is withdrawn')
     assert.ok(providers['workbuddy2'], 'the free lane moved to the new id')
-    assert.ok(providers['workbuddy2api-acc'], 'the metered lane is untouched')
+    assert.ok(providers['dsh-workbuddy2dsh-acc'], 'the metered lane is untouched')
     assert.deepEqual(
       providers['workbuddy2'].models.map((m) => m.id),
       FREE_IDS,
@@ -521,13 +549,13 @@ test('a lane that empties out is withdrawn, not left stale', async () => {
   const { stub, dataDir, providers, runtime } = await attachCase({ dirName: 'g' })
   try {
     await runtime.start(baseConfig(dataDir, stub.port))
-    assert.ok(providers['workbuddy2api-free'], 'the free lane starts populated')
+    assert.ok(providers['dsh-workbuddy2dsh-free'], 'the free lane starts populated')
 
     stub.setModels([{ id: 'cn:glm-5.2', name: 'GLM-5.2', credits: 'x0.79' }])
     await runtime.refresh()
 
-    assert.equal(providers['workbuddy2api-free'], undefined, 'the empty lane is withdrawn')
-    assert.ok(providers['workbuddy2api-acc'], 'the metered lane is untouched')
+    assert.equal(providers['dsh-workbuddy2dsh-free'], undefined, 'the empty lane is withdrawn')
+    assert.ok(providers['dsh-workbuddy2dsh-acc'], 'the metered lane is untouched')
   } finally {
     await stub.close()
     await runtime.dispose()
@@ -546,11 +574,11 @@ test('the catalogue still splits on list prices when the panel is unreachable', 
     await runtime.start(baseConfig(dataDir, stub.port))
 
     assert.deepEqual(
-      providers['workbuddy2api-free'].models.map((m) => m.id),
+      providers['dsh-workbuddy2dsh-free'].models.map((m) => m.id),
       FREE_IDS,
     )
     assert.deepEqual(
-      providers['workbuddy2api-acc'].models.map((m) => m.id),
+      providers['dsh-workbuddy2dsh-acc'].models.map((m) => m.id),
       METERED_IDS,
     )
   } finally {

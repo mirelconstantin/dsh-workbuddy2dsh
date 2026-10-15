@@ -2,6 +2,7 @@ import assert from 'node:assert/strict'
 import { test } from 'node:test'
 
 import {
+  RETRY_POLICY,
   isFreeModel,
   parseCredits,
   providerRoute,
@@ -93,8 +94,28 @@ test('providerRoute uses the openai-completions protocol the gateway speaks', ()
   assert.equal(route.api, 'openai-completions')
   assert.equal(route.baseURL, 'http://127.0.0.1:7863/v1')
   assert.equal(route.apiKeyEnv, 'K')
-  assert.equal(route.displayName, 'WorkBuddy2API')
+  assert.equal(route.displayName, 'dsh-workbuddy2dsh')
   assert.deepEqual(route.models, [{ id: 'm' }])
+  assert.equal(route.retryPolicy, RETRY_POLICY)
+})
+
+/**
+ * Pinned rather than compared against dsh-opencode-router at runtime: the two
+ * plugins are installed independently, so a drift has to be a deliberate edit
+ * here. The numbers are that plugin's FREE_LANE_RETRY_POLICY verbatim.
+ */
+test('the retry policy matches dsh-opencode-router, in the declared nested shape', () => {
+  assert.deepEqual(RETRY_POLICY, {
+    mode: 'normal',
+    maxRetries: 8,
+    retryableCodes: ['EMPTY_RESPONSE', 'RATE_LIMIT', 'SERVER', 'TIMEOUT', 'TRANSPORT'],
+    backoff: { initialDelayMs: 1_000, maxDelayMs: 20_000, jitterRatio: 0.2 },
+  })
+
+  // llm-pi-ai rejects the removed flat spelling, and nests the backoff.
+  assert.equal('maxRetries' in providerRoute({ apiKeyEnv: 'K', port: 1 }, []), false)
+  assert.equal('maxRetryDelayMs' in providerRoute({ apiKeyEnv: 'K', port: 1 }, []), false)
+  assert.equal(providerRoute({ apiKeyEnv: 'K', port: 1 }, []).retryPolicy.backoff.initialDelayMs, 1_000)
 })
 
 test('registerProvider writes only its own provider subtree', async () => {

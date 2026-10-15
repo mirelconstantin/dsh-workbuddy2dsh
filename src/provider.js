@@ -249,13 +249,33 @@ export async function fetchModels(port, apiKey, timeoutMs = MODELS_TIMEOUT_MS) {
   throw new Error(`could not read the model catalogue (${errors.join('; ')})`)
 }
 
+/**
+ * The request-retry policy both lanes run, in the declared shape
+ * `llm-pi-ai`'s `retryPolicy` accepts (`mode`/`maxRetries`/`retryableCodes`,
+ * with the backoff nested — the flat `maxRetries`/`maxRetryDelayMs` spelling was
+ * removed and is now a hard error).
+ *
+ * These are `dsh-opencode-router`'s free-lane numbers, kept identical on
+ * purpose: the same upstreams sit behind both gateways, so the same patience
+ * applies. Worst case per step is 1+2+4+8+16+20+20+20 ≈ 91 s of silent retries.
+ * `retryableCodes` mirrors the host default set, so this changes how long a
+ * qualifying failure is retried for, not which failures qualify.
+ */
+export const RETRY_POLICY = Object.freeze({
+  mode: 'normal',
+  maxRetries: 8,
+  retryableCodes: Object.freeze(['EMPTY_RESPONSE', 'RATE_LIMIT', 'SERVER', 'TIMEOUT', 'TRANSPORT']),
+  backoff: Object.freeze({ initialDelayMs: 1_000, maxDelayMs: 20_000, jitterRatio: 0.2 }),
+})
+
 /** The provider profile written into `llm-pi-ai.providers.<providerId>`. */
 export function providerRoute(target, models) {
   return {
-    displayName: target.displayName ?? 'WorkBuddy2API',
+    displayName: target.displayName ?? 'dsh-workbuddy2dsh',
     apiKeyEnv: target.apiKeyEnv,
     api: 'openai-completions',
     baseURL: providerBaseURL(target.port),
+    retryPolicy: RETRY_POLICY,
     models,
   }
 }

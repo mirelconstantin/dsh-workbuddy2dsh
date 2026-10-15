@@ -118,6 +118,17 @@ function laneIds(config) {
 }
 
 /**
+ * Route ids this plugin published under its previous name.
+ *
+ * The rename would otherwise leave both old lanes in the picker for good:
+ * nothing refreshes them, so they would sit there offering a frozen model list
+ * against a live port. They are withdrawn on the first refresh that finds them,
+ * and a config that deliberately still names one of them keeps it, because the
+ * active set is consulted first.
+ */
+const LEGACY_LANE_IDS = ['workbuddy2api-free', 'workbuddy2api-acc']
+
+/**
  * Build the lanes to publish from the gateway's catalogue.
  *
  * Free and metered are complementary, so together they still show the whole
@@ -420,11 +431,14 @@ export class GatewayRuntime {
       // had: a promotion expiring would otherwise leave the picker offering a
       // model list the gateway no longer prices that way.
       const active = new Set(lanes.map((lane) => lane.providerId))
-      for (const id of laneIds(config)) {
+      for (const id of [...laneIds(config), ...LEGACY_LANE_IDS]) {
         if (active.has(id)) continue
-        if (await removeProviderRoute({ settings }, id)) {
-          this.#logger.info(`workbuddy2dsh: withdrew provider route "${id}" — it has no models`)
-        }
+        if (!(await removeProviderRoute({ settings }, id))) continue
+        this.#logger.info(
+          LEGACY_LANE_IDS.includes(id)
+            ? `workbuddy2dsh: withdrew provider route "${id}" — left over from the plugin's previous name`
+            : `workbuddy2dsh: withdrew provider route "${id}" — it has no models`,
+        )
       }
 
       const ok = await registerProviderLanes(

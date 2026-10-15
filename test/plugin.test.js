@@ -68,11 +68,11 @@ test('Config resolves every documented default', { skip }, () => {
     {
       // Two lanes: the free lane carries the promo-factor-zero models, the
       // account lane everything else.
-      providerId: 'workbuddy2api-free',
+      providerId: 'dsh-workbuddy2dsh-free',
       apiKeyEnv: 'WORKBUDDY2DSH_TOKEN',
-      displayName: 'WorkBuddy2API Free',
-      accountProviderId: 'workbuddy2api-acc',
-      accountDisplayName: 'WorkBuddy2API Account',
+      displayName: 'dsh-workbuddy2dsh Free',
+      accountProviderId: 'dsh-workbuddy2dsh-acc',
+      accountDisplayName: 'dsh-workbuddy2dsh Account',
       restartDelayMs: 1000,
       restartMaxDelayMs: 60000,
       maxConsecutiveCrashes: 5,
@@ -90,8 +90,8 @@ test('a volatile field honours an explicit override', { skip }, () => {
 
 test('resolveConfig fills defaults over a partial config', { skip }, () => {
   assert.equal(mod.resolveConfig({ port: 9000 }).port, 9000)
-  assert.equal(mod.resolveConfig({ port: 9000 }).providerId, 'workbuddy2api-free')
-  assert.equal(mod.resolveConfig({ port: 9000 }).accountProviderId, 'workbuddy2api-acc')
+  assert.equal(mod.resolveConfig({ port: 9000 }).providerId, 'dsh-workbuddy2dsh-free')
+  assert.equal(mod.resolveConfig({ port: 9000 }).accountProviderId, 'dsh-workbuddy2dsh-acc')
 })
 
 test('apply with enabled: false starts nothing and says so', { skip }, async () => {
