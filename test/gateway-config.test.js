@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { after, before, test } from 'node:test'
 
-import { ensureGatewayConfig, generateApiKey, readGatewayConfig } from '../src/gateway-config.js'
+import { DEFAULT_API_KEY, ensureGatewayConfig, readGatewayConfig } from '../src/gateway-config.js'
 
 let root
 
@@ -17,11 +17,27 @@ after(async () => {
   await rm(root, { recursive: true, force: true })
 })
 
-test('generateApiKey is prefixed and unique', () => {
-  const a = generateApiKey()
-  const b = generateApiKey()
-  assert.match(a, /^sk-[A-Za-z0-9_-]{32}$/)
-  assert.notEqual(a, b)
+test('a fresh install gets the published default key, so the panel prompt is answerable', async () => {
+  const dir = join(root, 'default-key')
+  const { apiKey } = await ensureGatewayConfig(dir, 7863)
+
+  assert.equal(apiKey, DEFAULT_API_KEY)
+  assert.match(DEFAULT_API_KEY, /^sk-/)
+})
+
+test('the apiKey option wins over the key already in the file', async () => {
+  const dir = join(root, 'override')
+  const first = await ensureGatewayConfig(dir, 7863)
+
+  const second = await ensureGatewayConfig(dir, 7863, { apiKey: 'sk-chosen-by-the-user' })
+  assert.equal(second.apiKey, 'sk-chosen-by-the-user')
+  assert.equal(second.changed, true)
+  assert.equal(JSON.parse(await readFile(second.configPath, 'utf8')).api_key, 'sk-chosen-by-the-user')
+
+  // And it sticks: the file is now the source of truth for the next start.
+  const third = await ensureGatewayConfig(dir, 7863)
+  assert.equal(third.apiKey, 'sk-chosen-by-the-user')
+  assert.notEqual(third.apiKey, first.apiKey)
 })
 
 test('a missing config is seeded, and the data/auths directories are created', async () => {

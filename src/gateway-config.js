@@ -4,16 +4,15 @@
  * The gateway has a large configuration surface of its own (pool tuning,
  * cooldown windows, the check-in schedule, prompt mode, request logging,
  * Upstash mirroring, …). This plugin owns exactly two fields of it — `listen`
- * and `api_key` — because it is the party that picked the port and generated
- * the secret. Everything else is left exactly as the user left it, and a
- * config that does not exist yet is seeded with the same defaults the gateway
- * would generate for itself.
+ * and `api_key` — because it is the party that picked the port and owns the
+ * key. Everything else is left exactly as the user left it, and a config that
+ * does not exist yet is seeded with the same defaults the gateway would
+ * generate for itself.
  *
  * Relative `auth_dir` / `state_file` are resolved by the gateway against its
  * working directory, which is why the child is spawned with `cwd: <dataDir>`.
  */
 
-import { randomBytes } from 'node:crypto'
 import { existsSync } from 'node:fs'
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
@@ -36,10 +35,17 @@ function seedConfig() {
   }
 }
 
-/** A gateway API key. Prefixed so it is recognisable in a credential store. */
-export function generateApiKey() {
-  return `sk-${randomBytes(24).toString('base64url')}`
-}
+/**
+ * The gateway API key a fresh install gets.
+ *
+ * A fixed, published default rather than a random per-install secret: the
+ * gateway's panel asks for this key before it will show anything, and a random
+ * one left every user (and every agent setting the plugin up) hunting through
+ * `config.json` for a value they had never been told. It is loopback-only, and
+ * the upstream default is *no* authentication at all, so a known key is the
+ * stricter of the two. Override it with the plugin's `apiKey` setting.
+ */
+export const DEFAULT_API_KEY = 'sk-workbuddy2dsh'
 
 /**
  * Read the existing config, or `null` when there is none.
@@ -62,11 +68,16 @@ export async function readGatewayConfig(dataDir) {
  * Ensure the data directory and its `config.json` are in place, and report the
  * API key the plugin must present. Returns `{ configPath, apiKey, changed }`.
  *
+ * The key is resolved in that order: the `apiKey` option (the user's explicit
+ * choice, which wins over the file), then whatever `config.json` already holds
+ * — so an install that generated its own key long ago keeps it — then
+ * {@link DEFAULT_API_KEY} on a fresh one.
+ *
  * When `write` is false (attach mode — the gateway is managed elsewhere) the
  * file is only read: an existing key is reused, and a missing file is an error
  * rather than something this plugin invents.
  */
-export async function ensureGatewayConfig(dataDir, port, { write = true } = {}) {
+export async function ensureGatewayConfig(dataDir, port, { write = true, apiKey = '' } = {}) {
   await mkdir(join(dataDir, 'auths'), { recursive: true })
   await mkdir(join(dataDir, 'data'), { recursive: true })
 
@@ -83,22 +94,23 @@ export async function ensureGatewayConfig(dataDir, port, { write = true } = {}) 
     return { configPath, apiKey: String(existing.api_key ?? ''), changed: false }
   }
 
-  const apiKey =
-    typeof existing?.api_key === 'string' && existing.api_key.length > 0
+  const key =
+    apiKey ||
+    (typeof existing?.api_key === 'string' && existing.api_key.length > 0
       ? existing.api_key
-      : generateApiKey()
+      : DEFAULT_API_KEY)
 
   const next = {
     ...(existing ?? seedConfig()),
     listen: `127.0.0.1:${port}`,
-    api_key: apiKey,
+    api_key: key,
   }
 
   const serialised = `${JSON.stringify(next, null, 2)}\n`
   const previous = existing ? `${JSON.stringify(existing, null, 2)}\n` : null
   if (serialised !== previous) {
     await writeFile(configPath, serialised, 'utf8')
-    return { configPath, apiKey, changed: true }
+    return { configPath, apiKey: key, changed: true }
   }
-  return { configPath, apiKey, changed: false }
+  return { configPath, apiKey: key, changed: false }
 }

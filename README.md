@@ -85,7 +85,7 @@ dsh plugin add dsh-workbuddy2dsh --profile desktop
 | Route | Command |
 |---|---|
 | Local checkout | `dsh plugin add /absolute/path/to/dsh-workbuddy2dsh` |
-| Tarball | `dsh plugin add ./dsh-workbuddy2dsh-1.0.0.tgz` |
+| Tarball | `dsh plugin add ./dsh-workbuddy2dsh-1.1.0.tgz` |
 | Pinned to a commit | `dsh plugin add github:mirelconstantin/dsh-workbuddy2dsh#<sha>` |
 
 </details>
@@ -95,10 +95,21 @@ an account.
 
 ### 3. Add your WorkBuddy account
 
-Open **<http://127.0.0.1:7863/panel/>** and click **Add account**. The panel shows an
-authorisation link, your browser completes the login, and the credential is written to
-`~/.workbuddy2dsh/auths/` — no password ever passes through this plugin. The account is
-hot-loaded, and the first check-in runs as part of the same flow.
+Open **<http://127.0.0.1:7863/panel/>**. The panel asks for an API key before it will show
+anything — that is the gateway's own key, and on a fresh install it is:
+
+```
+sk-workbuddy2dsh
+```
+
+Paste it once and the browser remembers it. Nothing has to be configured to get this far: the
+plugin writes that key into `~/.workbuddy2dsh/config.json` at startup, prints it in DSH's log,
+and stores it for the model routes under `WORKBUDDY2DSH_TOKEN`. An install that already had a
+key of its own keeps that one instead — read it from the same file, or from the log.
+
+Click **Add account**. The panel shows an authorisation link, your browser completes the login,
+and the credential is written to `~/.workbuddy2dsh/auths/` — no password ever passes through
+this plugin. The account is hot-loaded, and the first check-in runs as part of the same flow.
 
 Within a few seconds, two provider groups appear in the model picker. `deepseek-v4.1-flash` is
 in the free one.
@@ -149,6 +160,7 @@ Everything is optional; the defaults work. Set fields in the plugin's card on th
 | `dataDir` | live | `~/.workbuddy2dsh` | Where `config.json`, `auths/` and `data/` live. |
 | `port` | live | `7863` | Loopback port. `0` picks a free port at startup. |
 | `refreshSeconds` | live | `300` | Model-list refresh interval once the catalog is populated. |
+| `apiKey` | live | *(resolved)* | The gateway's own API key — what its panel asks for, and the bearer token both routes send. Blank keeps the key already in `~/.workbuddy2dsh/config.json`, or the default on a fresh install. Changing it restarts the gateway. |
 | `providerId` | — | `workbuddy2api-free` | Route name for the free lane. |
 | `apiKeyEnv` | — | `WORKBUDDY2DSH_TOKEN` | Credential reference holding the gateway API key. Shared by both lanes. |
 | `displayName` | — | `WorkBuddy2API Free` | Group name in the picker for the free lane. |
@@ -163,6 +175,26 @@ Everything is optional; the defaults work. Set fields in the plugin's card on th
 running gateway with no restart. The runtime does the minimum work: a connection change
 restarts the child, a route-identity change republishes **both** routes, and a `refreshSeconds`
 change only re-arms the timer.
+
+### The gateway API key
+
+This is the one setting worth knowing about, because the gateway's panel will not show anything
+until you supply it.
+
+| | |
+|---|---|
+| **Default** | `sk-workbuddy2dsh` — fixed and published, so it never has to be hunted for |
+| **Where it lives** | `api_key` in `~/.workbuddy2dsh/config.json` |
+| **How to read it** | The `workbuddy2dsh: gateway API key is …` line in DSH's log, or that file |
+| **How to change it** | Set `apiKey` in the card above, or edit `api_key` in that file |
+| **What it gates** | The panel, `/v1`, and `/status` — the bearer token the published routes send |
+
+A fresh install uses the default, so there is nothing to configure and nothing to look up. The
+plugin writes the resolved key into the gateway's config at startup, prints it once in the log,
+and stores it under `apiKeyEnv` for the routes. Setting `apiKey` overrides the file and restarts
+the gateway; clearing it goes back to whatever the file holds. An install that already generated
+a key of its own keeps it — nothing is ever re-keyed behind your back, and a key that disagrees
+with the running gateway is reported as such rather than left to fail as a 401 per request.
 
 The gateway has its **own**, much larger configuration file (`~/.workbuddy2dsh/config.json`):
 account-pool tuning, cooldown windows, the check-in schedule, prompt mode, request logging and
@@ -249,6 +281,7 @@ except the child's teardown signal and the binary's name.
 
 | Symptom | Cause and fix |
 |---|---|
+| **The panel asks for an API key** | It is the gateway's own key, and a fresh install uses `sk-workbuddy2dsh`. Otherwise it is the `apiKey` setting, else `api_key` in `~/.workbuddy2dsh/config.json`, else the default — and the plugin prints the resolved value in DSH's log at startup. |
 | Picker never shows **WorkBuddy2API Free** | No account yet. Open the panel and add one; the plugin retries every 15 s. |
 | Only one of the two lanes appears | Its model set is empty (e.g. the promotion ended), so the route is withdrawn instead of published empty. Check the panel's **Models** view. |
 | The chip never appears | The browser half is not built. Run `npm run build`, then reload DSH. |
@@ -307,6 +340,11 @@ picker it lives under.
 
 ## Known Limitations and Deferred Work
 
+- **The gateway API key is a published default** — `sk-workbuddy2dsh` is printed in this
+  README, so it keeps a stray local process off the gateway, not someone who has read the
+  source. That is deliberate: the key is loopback-only, upstream's own default is *no*
+  authentication at all, and the alternative was a random secret nobody was ever told while the
+  panel demanded it. Set `apiKey` if you want a private one.
 - **The gateway is a sidecar, not an adapter** — the plugin depends on the upstream binary
   being present and startable. `scripts/build-gateway.mjs` handles that once; `attachOnly`
   borrows a gateway someone else owns. There is no pure-Node fallback, and building one would

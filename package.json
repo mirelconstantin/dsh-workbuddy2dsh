@@ -1,6 +1,6 @@
 {
   "name": "dsh-workbuddy2dsh",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "WorkBuddy2API inside DeepSeek Harness: runs the self-hosted WorkBuddy gateway as a sidecar and publishes its models (including the free DeepSeek V4.1 Flash) into the normal model picker as two lanes — free and account-metered. No proxy, no exit pool.",
   "icon": "./icon.svg",
   "type": "module",

@@ -80,6 +80,17 @@ race, and a missing `settings` skips the route instead of the credential.
 Everything else in that file is the user's. `ensureGatewayConfig` merges and
 compares rather than overwriting, and refuses to touch a malformed file.
 
+**The gateway API key is a published default, not a per-install secret.**
+A fresh install gets `DEFAULT_API_KEY` (`sk-workbuddy2dsh`). The gateway's panel
+demands a key before it renders anything, and a random one left every user — and
+every agent setting the plugin up — hunting `config.json` for a value nobody had
+told them. Resolution order is the `apiKey` setting, then an existing `api_key`
+in the file, then the default: an install that already generated its own key
+keeps it, so nothing is ever re-keyed behind a user's back. The resolved value is
+logged once at startup together with where to change it. `apiKey` belongs in
+`CONNECTION_FIELDS`, not `ROUTE_FIELDS` — the gateway reads the key when it
+starts, so a change has to restart the child, not merely republish the routes.
+
 **Never write into the plugin's own directory.** A package installed from npm
 lives in a read-only tree. All state goes to `~/.workbuddy2dsh`.
 

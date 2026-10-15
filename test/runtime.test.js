@@ -264,6 +264,24 @@ test('start publishes both lanes and dispose withdraws them', async () => {
   }
 })
 
+test('startup states the gateway API key and where to change it', async () => {
+  // The panel demands this key before it renders anything and nothing else in
+  // the UI reveals it, so this log line is the user's only pointer to it — and
+  // in attach mode the plugin does not own the file the key came from.
+  const { stub, dataDir, ctx, runtime } = await attachCase({ dirName: 'key-log' })
+  try {
+    await runtime.start(baseConfig(dataDir, stub.port))
+
+    const line = ctx.logs.map(([, message]) => message).find((m) => /gateway API key is/.test(m))
+    assert.ok(line, `expected the key notice, got: ${JSON.stringify(ctx.logs)}`)
+    assert.ok(line.includes(API_KEY), 'the resolved key is printed')
+    assert.ok(line.includes(join(dataDir, 'config.json')), 'and where to change it')
+  } finally {
+    await runtime.dispose()
+    await stub.close()
+  }
+})
+
 test('an empty catalog still stores the credential', async () => {
   // The key belongs to the gateway, which is already up, so it is published
   // before the catalog is read. A login landing between two refreshes must be

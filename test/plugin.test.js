@@ -34,7 +34,7 @@ test('the entry module is a namespace plugin, never a default export', { skip },
  * `Volatile<T>` references, not plain values — that is what makes them
  * live-editable, and it is why every read goes through `.get()`.
  */
-const VOLATILE = ['enabled', 'attachOnly', 'binaryPath', 'dataDir', 'port', 'refreshSeconds']
+const VOLATILE = ['enabled', 'attachOnly', 'binaryPath', 'dataDir', 'port', 'refreshSeconds', 'apiKey']
 
 /** Read a resolved Config field, dereferencing a volatile reference. */
 function read(resolved, key) {
@@ -54,6 +54,7 @@ test('Config resolves every documented default', { skip }, () => {
       dataDir: '',
       port: 7863,
       refreshSeconds: 300,
+      apiKey: '',
     },
   )
 
@@ -119,7 +120,7 @@ test('the public surface re-exports its helpers', { skip }, () => {
     'GatewayProcess',
     'describeAccessDenial',
     'ensureGatewayConfig',
-    'generateApiKey',
+    'DEFAULT_API_KEY',
     'findFreePort',
     'waitForHealth',
     'fetchModels',

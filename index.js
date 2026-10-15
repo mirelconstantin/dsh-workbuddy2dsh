@@ -54,6 +54,7 @@ export const defaults = {
   providerId: 'workbuddy2api-free',
   accountProviderId: 'workbuddy2api-acc',
   apiKeyEnv: 'WORKBUDDY2DSH_TOKEN',
+  apiKey: '',
   displayName: 'WorkBuddy2API Free',
   accountDisplayName: 'WorkBuddy2API Account',
   refreshSeconds: 300,
@@ -88,6 +89,13 @@ export const Config = Schema.object({
   port: Schema.number().step(1).min(0).max(65535).default(7863).volatile(),
   /** Model-list refresh interval, seconds, once the catalog is populated. */
   refreshSeconds: Schema.number().step(1).min(5).default(defaults.refreshSeconds).volatile(),
+  /**
+   * The gateway's own API key — the one its panel asks for, and the one the
+   * published routes send as a bearer token. Blank keeps whatever
+   * `~/.workbuddy2dsh/config.json` already holds, or DEFAULT_API_KEY on a fresh
+   * install. Changing it restarts the gateway, because it reads the key once.
+   */
+  apiKey: Schema.string().default(defaults.apiKey).volatile(),
   /**
    * Provider route for the zero-cost models — those the gateway advertises as
    * free right now (list price 0, or a promotion that zeroes it).
@@ -157,7 +165,7 @@ export function apply(ctx, config = {}) {
 
 export { GatewayRuntime, describeAccessDenial, snapshot } from './src/runtime.js'
 export { GatewayProcess } from './src/gateway-process.js'
-export { ensureGatewayConfig, generateApiKey } from './src/gateway-config.js'
+export { DEFAULT_API_KEY, ensureGatewayConfig } from './src/gateway-config.js'
 export { findFreePort, waitForHealth } from './src/health.js'
 export { BRIDGE_PREFIX, laneOf, parseCredits as parseCreditsText, readStatus } from './src/bridge.mjs'
 export { bridgeRoute, isTrustedRequest } from './src/web-route.mjs'

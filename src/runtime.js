@@ -87,7 +87,15 @@ function askForServices(ctx, services, timeoutMs) {
 }
 
 /** Fields whose change requires a restart of the child process. */
-const CONNECTION_FIELDS = ['enabled', 'attachOnly', 'binaryPath', 'dataDir', 'port', 'extraArgs']
+const CONNECTION_FIELDS = [
+  'enabled',
+  'attachOnly',
+  'binaryPath',
+  'dataDir',
+  'port',
+  'apiKey',
+  'extraArgs',
+]
 
 /** Fields whose change requires the provider routes to be rewritten. */
 const ROUTE_FIELDS = [
@@ -294,6 +302,7 @@ export class GatewayRuntime {
       // a system service) and the plugin only borrows its endpoint.
       const { configPath, apiKey, changed } = await ensureGatewayConfig(dataDir, port, {
         write: !attachOnly,
+        apiKey: config.apiKey,
       })
       this.#state.port = port
       this.#state.apiKey = apiKey
@@ -327,6 +336,14 @@ export class GatewayRuntime {
       this.#logger.info(
         `workbuddy2dsh: gateway ready on 127.0.0.1:${port}/v1 ` +
           `(${health.body?.total ?? 0} account(s)); management panel: ${panelUrl(port)}`,
+      )
+      // The panel demands this key before it will show anything, and nothing
+      // else in the UI reveals it — so it is stated once, with where to change it.
+      this.#logger.info(
+        `workbuddy2dsh: gateway API key is ${apiKey} (the panel asks for it) — ` +
+          (attachOnly
+            ? `read from ${configPath}`
+            : `change it with the "apiKey" setting or in ${configPath}`),
       )
 
       await this.refresh(config)
