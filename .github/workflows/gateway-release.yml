@@ -49,7 +49,10 @@ jobs:
 
       - uses: actions/setup-go@v5
         with:
-          go-version-file: go.mod
+          # Pinned for the same reason as ci.yml: Go 1.27 links Darwin binaries
+          # without the LC_UUID command current macOS requires, so a release
+          # built with it would abort on launch for every macOS user.
+          go-version: '1.23.x'
 
       - name: version string from the source
         id: ver
