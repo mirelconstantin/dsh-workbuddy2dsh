@@ -1,0 +1,87 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Secrets, account material and runtime state.
+#
+# The gateway writes here when it runs: `~/.workbuddy2dsh/auths/` holds
+# plaintext access/refresh tokens. Nothing below may ever be committed.
+# ─────────────────────────────────────────────────────────────────────────────
+auths/
+data/
+*.key
+*.pem
+*.env
+.env
+.env.*
+config.json
+config.local.json
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Upstream source tree (a full checkout vendors the gateway; a release does not)
+# ─────────────────────────────────────────────────────────────────────────────
+/login
+/credit
+/wb2api
+/signin_bin
+/backups/
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Build output. `bin/` is deliberately TRACKED: it holds the prebuilt gateway
+# binaries and is the first place the plugin looks for one (see
+# `src/paths.js: defaultBinaryPath`). Release archives are built from it.
+# ─────────────────────────────────────────────────────────────────────────────
+*.tmp
+__pycache__/
+*.py[cod]
+*.zip
+*.tar.gz
+*.log
+server.exe
+.DS_Store
+
+# Go toolchain and build caches — a full source checkout vendors these, and
+# none of it belongs in a published repo.
+/_tools/go/
+/_tools/cache/
+/_tools/tmp/
+/_tools/gopath/
+/_tools/go-toolchains/
+
+# ─────────────────────────────────────────────────────────────────────────────
+# IDE
+# ─────────────────────────────────────────────────────────────────────────────
+.idea/
+.vscode/
+LOOP.md
+PLAN.md
+SPEC.md
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Node
+# ─────────────────────────────────────────────────────────────────────────────
+node_modules/
+npm-debug.log*
+.npm/
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Documentation.
+#
+# README.md, AGENTS.md and everything under docs/ are the published surface of
+# this repo and MUST be versioned. Everything else is a scratch file.
+# ─────────────────────────────────────────────────────────────────────────────
+*.md
+!README.md
+!AGENTS.md
+!docs/**
+!LICENSE
+!NOTICE
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Vendored reference copies (not part of the build, safe to keep in a checkout)
+# ─────────────────────────────────────────────────────────────────────────────
+/_upstream_bin/
+
+# Local verification tooling
+/cmd/desktopverify*/
+
+# Local setup output the old script used to leave behind. Only `bin/` is a
+# tracked, published location — see the note above.
+/_runtime/

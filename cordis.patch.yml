@@ -1,0 +1,10 @@
+# dsh-workbuddy2dsh — bundle entry: insert the plugin row (deployment-global).
+#
+# The defaults need no edits: the gateway is started on port 7863 and its model
+# list is published to the picker as soon as the settings seam is available.
+# Everything is overridable from the profile's cordis.patch.yml — see the
+# plugin README for the field table.
+- insert:
+    - id: workbuddy2dsh
+      name: 'dsh-workbuddy2dsh'
+      config: {}

@@ -1,0 +1,113 @@
+name: ci
+
+# Every push and pull request, on three operating systems.
+#
+# The plugin is a Node package and the gateway is a Go binary, so this checks
+# both halves independently on ubuntu / windows / macos: the unit suite and the
+# static contract check, then a real Go build of the gateway for the runner's
+# platform — which is the only way to know the plugin's `bin/` layout is right
+# rather than merely asserted.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  node:
+    name: plugin checks (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: install the peer dependency the host would otherwise supply
+        run: npm install --no-save @deepseek-ai/schemastery
+
+      - name: static contract check
+        run: npm run check
+
+      - name: unit suite
+        run: npm test
+
+      - name: the setup script is runnable from a clean checkout
+        run: node scripts/build-gateway.mjs --help
+
+  gateway:
+    name: gateway build (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            artifact: wb2api-linux-amd64
+          - os: windows-latest
+            artifact: wb2api-windows-amd64.exe
+          - os: macos-latest
+            artifact: wb2api-darwin-arm64
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: build for this platform
+        run: go build -trimpath -ldflags="-s -w" -o "${{ matrix.artifact }}" ./cmd/server
+
+      - name: the binary answers /healthz
+        shell: bash
+        run: |
+          set -euo pipefail
+          DIR="$(mktemp -d)"
+          printf '{"listen":"127.0.0.1:0","api_key":"sk-ci","auth_dir":"%s/auths","state_file":"%s/data/state.json"}' \
+            "$DIR" "$DIR" > "$DIR/config.json"
+          mkdir -p "$DIR/auths" "$DIR/data"
+          BIN=""
+          for candidate in "./${{ matrix.artifact }}" "./${{ matrix.artifact }}.exe"; do
+            [ -x "$candidate" ] && BIN="$candidate" && break
+          done
+          if [ -z "$BIN" ]; then
+            echo "no built binary found next to the repo root"
+            ls -la
+            exit 1
+          fi
+          # Boot it, read the port it announces, then check the endpoint the
+          # plugin's readiness contract is written against.
+          PORT="$("$BIN" -config "$DIR/config.json" 2>"$DIR/log" & sleep 3; \
+                 grep -oE '127\.0\.0\.1:[0-9]+' "$DIR/log" | head -1 | cut -d: -f2)"
+          if [ -z "$PORT" ]; then
+            echo "the gateway never announced its listen port"; cat "$DIR/log"; exit 1
+          fi
+          echo "gateway is on 127.0.0.1:${PORT}"
+          curl -fsS "http://127.0.0.1:${PORT}/healthz" && echo
+          curl -fsS -H "Authorization: Bearer sk-ci" "http://127.0.0.1:${PORT}/v1/models" >/dev/null \
+            && echo "the catalog endpoint answers with the key"
+          pkill -f "$(basename "$BIN")" || true
+
+      - name: upload the platform binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: gateway-${{ matrix.os }}
+          path: |
+            ${{ matrix.artifact }}
+            ${{ matrix.artifact }}.exe
+          if-no-files-found: warn
+          retention-days: 7

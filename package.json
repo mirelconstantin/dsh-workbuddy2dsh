@@ -1,0 +1,85 @@
+{
+  "name": "dsh-workbuddy2dsh",
+  "version": "1.0.0",
+  "description": "WorkBuddy2API inside DeepSeek Harness: runs the self-hosted WorkBuddy gateway as a sidecar and publishes its models (including the free DeepSeek V4.1 Flash) into the normal model picker as two lanes — free and account-metered. No proxy, no exit pool.",
+  "icon": "./icon.svg",
+  "type": "module",
+  "main": "index.js",
+  "exports": {
+    ".": "./index.js",
+    "./package.json": "./package.json",
+    "./locale/*.json": "./locale/*.json"
+  },
+  "files": [
+    "index.js",
+    "src",
+    "cordis.patch.yml",
+    "icon.svg",
+    "locale",
+    "bin",
+    "scripts",
+    "docs",
+    "README.md",
+    "AGENTS.md",
+    "LICENSE",
+    "NOTICE"
+  ],
+  "keywords": [
+    "deepseek-harness",
+    "dsh",
+    "dsh-plugin",
+    "dsh-plugins",
+    "dsh-external",
+    "cordis",
+    "plugin",
+    "workbuddy",
+    "codebuddy",
+    "workbuddy2api",
+    "llm-provider",
+    "llm-adapter",
+    "free-models",
+    "free-llm",
+    "deepseek",
+    "deepseek-v4-1-flash",
+    "openai-compatible"
+  ],
+  "license": "MIT",
+  "author": "Mirel Constantinescu (https://github.com/mirelconstantin)",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mirelconstantin/dsh-workbuddy2dsh.git"
+  },
+  "homepage": "https://github.com/mirelconstantin/dsh-workbuddy2dsh#readme",
+  "bugs": {
+    "url": "https://github.com/mirelconstantin/dsh-workbuddy2dsh/issues"
+  },
+  "engines": {
+    "node": "^22.19.0 || >=24.0.0",
+    "dsh": ">=0.2.0-0 <0.3.0"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "compatibility": {
+      "dshReleases": {
+        "0.2.0-rc.2": "compatible"
+      }
+    }
+  },
+  "scripts": {
+    "test": "node --test test/provider.test.js test/gateway-config.test.js test/runtime.test.js test/plugin.test.js",
+    "check": "node --check index.js && node scripts/check-plugin.mjs",
+    "e2e": "node scripts/e2e-gateway.mjs",
+    "build:gateway": "node scripts/build-gateway.mjs",
+    "setup": "node scripts/build-gateway.mjs"
+  },
+  "peerDependencies": {
+    "@deepseek-ai/schemastery": ">=3.18.4 <4"
+  },
+  "peerDependenciesMeta": {
+    "@deepseek-ai/schemastery": {
+      "optional": true
+    }
+  }
+}

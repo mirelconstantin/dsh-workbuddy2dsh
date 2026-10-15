@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "WorkBuddy2API",
+    "description": "把自建的 WorkBuddy2API 网关作为边车进程运行，并把它的模型按“免费”和“按账户计费”两条通道发布到 DeepSeek Harness 的模型选择器，其中含限时免费的 DeepSeek V4.1 Flash。"
+  }
+}

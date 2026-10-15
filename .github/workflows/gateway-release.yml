@@ -1,0 +1,139 @@
+name: gateway-release
+
+# Cross-platform gateway binaries, published as a release the plugin's setup
+# script can download.
+#
+#   - push to main → build verification only (artifacts, no release)
+#   - tag `gateway-v*` → build all five platforms, checksum them, publish the
+#     release. This is the release `scripts/build-gateway.mjs` downloads from.
+#
+# The tag name is a default (`--tag gateway-v1`), so the first published
+# release should be named exactly that, or the setup script pointed at another
+# one. Both are supported; consistency is not enforced because the plugin may
+# need to pin a gateway that predates a naming decision.
+on:
+  push:
+    branches: [main]
+    tags: ["gateway-v*"]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  # Kept in sync with scripts/build-gateway.mjs (REPO_OWNER / REPO_NAME /
+  # GATEWAY_TAG). A mismatch makes the download route 404, which the setup
+  # script reports as "no prebuilt gateway release yet".
+  REPO_OWNER: mirelconstantin
+  REPO_NAME: dsh-workbuddy2dsh
+  RELEASE_TAG: gateway-v1
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { goos: windows, goarch: amd64, asset: wb2api-windows-amd64.exe.zip, kind: zip }
+          - { goos: linux, goarch: amd64, asset: wb2api-linux-amd64.tar.gz, kind: tar }
+          - { goos: linux, goarch: arm64, asset: wb2api-linux-arm64.tar.gz, kind: tar }
+          - { goos: darwin, goarch: amd64, asset: wb2api-darwin-amd64.tar.gz, kind: tar }
+          - { goos: darwin, goarch: arm64, asset: wb2api-darwin-arm64.tar.gz, kind: tar }
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: version string from the source
+        id: ver
+        run: echo "v=$(grep -oP 'appVersion = "\K[^"]+' cmd/server/main.go)" >> "$GITHUB_OUTPUT"
+
+      - name: cross-compile
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+          CGO_ENABLED: "0"
+        run: |
+          OUT="wb2api"
+          [ "${{ matrix.goos }}" = "windows" ] && OUT="wb2api.exe"
+          go build -trimpath -ldflags="-s -w" -o "$OUT" ./cmd/server
+
+      # The plugin boots the child with cwd set to its data directory and
+      # resolves ./auths and ./data relative to it, so a release archive that
+      # only holds the binary is enough — the plugin seeds the config itself.
+      - name: pack
+        run: |
+          if [ "${{ matrix.kind }}" = "zip" ]; then
+            zip -q "${{ matrix.asset }}" wb2api.exe
+          else
+            tar czf "${{ matrix.asset }}" wb2api
+          fi
+          sha256sum "${{ matrix.asset }}" | tee "${{ matrix.asset }}.sha256"
+
+      # The strip is verified the same way upstream verifies it: the built
+      # binary must carry the source appVersion, so a matrix entry cannot
+      # silently compile the wrong tree.
+      - name: assert the version string is present
+        run: |
+          if ! grep -qa "${{ steps.ver.outputs.v }}" "${{ matrix.goos == 'windows' && 'wb2api.exe' || 'wb2api' }}"; then
+            echo "::error::binary for ${{ matrix.goos }}/${{ matrix.goarch }} is missing ${{ steps.ver.outputs.v }}"
+            exit 1
+          fi
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.asset }}
+          path: |
+            ${{ matrix.asset }}
+            ${{ matrix.asset }}.sha256
+          if-no-files-found: error
+          retention-days: 14
+
+  publish:
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/gateway-v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: roll the checksums file
+        run: |
+          cd dist
+          sha256sum *.zip *.tar.gz > checksums.txt
+          ls -la
+
+      - name: tag and source version agree
+        run: |
+          SRC=$(grep -oP 'appVersion = "\K[^"]+' cmd/server/main.go)
+          TAG="${GITHUB_REF_NAME#gateway-v}"
+          if [ "$TAG" != "$SRC" ] && [[ "$TAG" != *-* ]]; then
+            echo "::error::gateway-$TAG vs source appVersion=$SRC — check the tag"
+            exit 1
+          fi
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          name: ${{ github.ref_name }}
+          prerelease: ${{ contains(github.ref_name, '-') }}
+          body: |
+            Prebuilt gateway binaries for `dsh-workbuddy2dsh`.
+
+            `scripts/build-gateway.mjs` downloads the one matching your platform
+            and verifies it against `checksums.txt`, so a checkout with no Go
+            toolchain still installs. Inside the plugin, `dsh plugin add` finds
+            these without any manual step.
+
+            Assets: Windows amd64 (exe), Linux amd64/arm64, macOS amd64/arm64.
+          files: dist/*

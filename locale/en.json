@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "WorkBuddy2API",
+    "description": "Run the self-hosted WorkBuddy2API gateway as a sidecar and publish its models into the DeepSeek Harness model picker in two lanes — free and account-metered — including the free DeepSeek V4.1 Flash."
+  }
+}

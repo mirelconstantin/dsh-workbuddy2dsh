@@ -1,0 +1,111 @@
+dsh-workbuddy2dsh
+=================
+
+This package is a **derivative work**. It bundles and drives the
+WorkBuddy2API gateway, which is third-party open-source software. Nothing in
+this repository removes or replaces the upstream licence, and the upstream
+copyright notices are reproduced in full in LICENSE.
+
+Upstream
+--------
+
+  WorkBuddy2API Panel
+  https://github.com/linguo2625469/workbuddy2api-panel
+  Copyright (c) 2026 linguo2625469
+
+  which is itself a fork of
+  workbuddy2api
+  https://github.com/Sliverkiss/workbuddy2api
+  Copyright (c) 2026 Sliverkiss
+
+  Licence: MIT (see LICENSE)
+
+  The gateway source lives in this repository unchanged apart from an English
+  translation of the user-visible strings (the web panel, the runtime log
+  lines, the HTTP error text and the CLI help). The translation is a
+  modification of the upstream source and is published under the same MIT
+  terms.
+
+What this package adds
+----------------------
+
+  index.js, package.json, cordis.patch.yml, locale/, icon.svg, scripts/ and
+  this file are original work, Copyright (c) 2026 Mirel Constantinescu, and are
+  released under the MIT licence as well (see LICENSE).
+
+  The plugin does not modify, relicense or redistribute the gateway as a
+  separate product. It starts the gateway the user built from the upstream
+  source, and registers its OpenAI-compatible endpoint with DeepSeek Harness.
+
+No affiliation
+--------------
+
+  This project is not affiliated with, endorsed by, or supported by Tencent,
+  CodeBuddy, WorkBuddy, DeepSeek, or the upstream authors. It is an
+  unofficial integration provided as-is, with no warranty.
+
+Upstream usage declaration (translated)
+---------------------------------------
+
+  The upstream project states, in Chinese, a usage declaration that applies to
+  everything in this repository. It is reproduced here in English so it travels
+  with the code:
+
+  1. This project is intended **only for managing your own account(s)** —
+     automatic check-in, keep-alive, and an OpenAI-compatible entry point for
+     your own local tools. It is a free, open-source, self-use tool provided
+     "as is".
+
+  2. Bulk-registering throwaway accounts, acquiring accounts in bulk, offering
+     a paid API, running a shared pool, or reselling quota is **expressly not
+     supported and is prohibited**. The authors disclaim any connection with,
+     and any responsibility for, such use and its consequences (including
+     account bans, terms-of-service violations and legal risk).
+
+  3. Bulk account registration and resale of interface quota violate the
+     target platform's terms of service. CodeBuddy / Tencent services prohibit
+     bulk account registration and commercial resale of interface access.
+
+  4. Do **not** buy any "paid", "licensed-key" or "public relay" version of
+     this project. The project is free and open source forever. Any wrapped,
+     encrypted or bundled-for-payment "version" is a third-party modification
+     unrelated to this project, cannot be audited, and carries a real risk of
+     backdoors exfiltrating your CodeBuddy credentials — `auths/` stores
+     plaintext access and refresh tokens.
+
+  5. MIT grants freedom at the level of the code. It does **not** grant the
+     right to advertise, sell, bundle-distribute or claim endorsement by the
+     authors.
+
+  6. The upstream author reserves the right to stop maintaining, close or
+     delete the upstream repository at any time, without notice, if the abuse
+     continues.
+
+  If you are using this to manage your own account, you are welcome here.
+
+Compliance notes for this integration
+-------------------------------------
+
+  * The gateway is an **unofficial** front end. It uses a WorkBuddy account as
+    its upstream and is intended for your own authorised account(s), on your
+    own machine or private environment only.
+
+  * `auths/` holds plaintext tokens. Treat that directory as a secret. It is
+    created under `~/.workbuddy2dsh/auths` by default and is never written into
+    this repository.
+
+  * The gateway binds to `127.0.0.1` only. Do not expose it publicly: the API
+    key is a single shared secret with no per-user scoping.
+
+Third-party components
+----------------------
+
+  * WorkBuddy2API gateway — MIT — see above.
+  * DeepSeek Harness (`@deepseek-ai/*`) — MIT — https://github.com/deepseek-ai/deepseek-harness
+  * @deepseek-ai/schemastery — MIT — configuration schema validator supplied by
+    the host at runtime.
+
+The DeepSeek V4.1 Flash "free now" promotion is a WorkBuddy pricing decision,
+not a feature of this project. It is time-limited and may end or change at any
+time; verify the "free now" label and the 0.00 credit multiplier in WorkBuddy
+before relying on it.
